@@ -2099,56 +2099,62 @@
 				n = Math.min(n, self.settings.maxOptions);
 			}
 	
-			// render and group available options individually
-			groups = {};
-			groups_order = [];
+			var autoRefresh = self.settings.autoRefreshOptions !== false ? true : false;
 	
-			for (i = 0; i < n; i++) {
-				option      = self.options[results.items[i].id];
-				option_html = self.render('option', option);
-				optgroup    = option[self.settings.optgroupField] || '';
-				optgroups   = $.isArray(optgroup) ? optgroup : [optgroup];
+			if ($dropdown_content.html() == '' || autoRefresh) {
 	
-				for (j = 0, k = optgroups && optgroups.length; j < k; j++) {
-					optgroup = optgroups[j];
-					if (!self.optgroups.hasOwnProperty(optgroup)) {
-						optgroup = '';
+				// render and group available options individually
+				groups = {};
+				groups_order = [];
+	
+				for (i = 0; i < n; i++) {
+					option      = self.options[results.items[i].id];
+					option_html = self.render('option', option);
+					optgroup    = option[self.settings.optgroupField] || '';
+					optgroups   = $.isArray(optgroup) ? optgroup : [optgroup];
+	
+					for (j = 0, k = optgroups && optgroups.length; j < k; j++) {
+						optgroup = optgroups[j];
+						if (!self.optgroups.hasOwnProperty(optgroup)) {
+							optgroup = '';
+						}
+						if (!groups.hasOwnProperty(optgroup)) {
+							groups[optgroup] = [];
+							groups_order.push(optgroup);
+						}
+						groups[optgroup].push(option_html);
 					}
-					if (!groups.hasOwnProperty(optgroup)) {
-						groups[optgroup] = [];
-						groups_order.push(optgroup);
+				}
+	
+				// sort optgroups
+				if (this.settings.lockOptgroupOrder) {
+					groups_order.sort(function(a, b) {
+						var a_order = self.optgroups[a].$order || 0;
+						var b_order = self.optgroups[b].$order || 0;
+						return a_order - b_order;
+					});
+				}
+	
+				// render optgroup headers & join groups
+				html = [];
+				for (i = 0, n = groups_order.length; i < n; i++) {
+					optgroup = groups_order[i];
+					if (self.optgroups.hasOwnProperty(optgroup) && groups[optgroup].length) {
+						// render the optgroup header and options within it,
+						// then pass it to the wrapper template
+						html_children = self.render('optgroup_header', self.optgroups[optgroup]) || '';
+						html_children += groups[optgroup].join('');
+						html.push(self.render('optgroup', $.extend({}, self.optgroups[optgroup], {
+							html: html_children
+						})));
+					} else {
+						html.push(groups[optgroup].join(''));
 					}
-					groups[optgroup].push(option_html);
 				}
-			}
 	
-			// sort optgroups
-			if (this.settings.lockOptgroupOrder) {
-				groups_order.sort(function(a, b) {
-					var a_order = self.optgroups[a].$order || 0;
-					var b_order = self.optgroups[b].$order || 0;
-					return a_order - b_order;
-				});
-			}
+				$dropdown_content.html(html.join(''));
 	
-			// render optgroup headers & join groups
-			html = [];
-			for (i = 0, n = groups_order.length; i < n; i++) {
-				optgroup = groups_order[i];
-				if (self.optgroups.hasOwnProperty(optgroup) && groups[optgroup].length) {
-					// render the optgroup header and options within it,
-					// then pass it to the wrapper template
-					html_children = self.render('optgroup_header', self.optgroups[optgroup]) || '';
-					html_children += groups[optgroup].join('');
-					html.push(self.render('optgroup', $.extend({}, self.optgroups[optgroup], {
-						html: html_children
-					})));
-				} else {
-					html.push(groups[optgroup].join(''));
-				}
 			}
-	
-			$dropdown_content.html(html.join(''));
 	
 			// highlight matching terms inline
 			if (self.settings.highlight && results.query.length && results.tokens.length) {
